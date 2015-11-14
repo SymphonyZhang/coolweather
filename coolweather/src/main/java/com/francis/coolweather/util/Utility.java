@@ -109,13 +109,6 @@ public class Utility {
     public static void saveWeatherInfo(Context context, String cityName, String weatherCode, String temp1, String temp2, String weatherDesp, String publishTime) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日", Locale.CHINA);
         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
-
-        LogUtil.d("Utility", "cityName is " + cityName);
-        LogUtil.d("Utility", "temp1 is " + temp1);
-        LogUtil.d("Utility", "temp2 is " + temp2);
-        LogUtil.d("Utility", "weatherDesp is " + weatherDesp);
-        LogUtil.d("Utility", "publishTime is " + publishTime);
-
         editor.putBoolean("city_selected", true);
         editor.putString("city_name", cityName);
         editor.putString("weather_code", weatherCode);

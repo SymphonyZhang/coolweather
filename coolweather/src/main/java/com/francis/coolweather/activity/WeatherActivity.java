@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import com.francis.coolweather.R;
 import com.francis.coolweather.interfaces.HttpCallbackListener;
+import com.francis.coolweather.service.AutoUpdateService;
 import com.francis.coolweather.util.HttpUtil;
 import com.francis.coolweather.util.LogUtil;
 import com.francis.coolweather.util.Utility;
@@ -119,15 +120,6 @@ public class WeatherActivity extends BaseActivity implements View.OnClickListene
      */
     private void showWeather(){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-
-        /*LogUtil.d("WeatherActivity","cityName is "+prefs.getString("city_name",""));
-        LogUtil.d("WeatherActivity","currentDate is "+prefs.getString("current_date",""));
-        LogUtil.d("WeatherActivity","temp1 is "+prefs.getString("temp1",""));
-        LogUtil.d("WeatherActivity","temp2 is "+prefs.getString("temp2",""));
-        LogUtil.d("WeatherActivity","weatherDesp is "+prefs.getString("weather_desp",""));
-        LogUtil.d("WeatherActivity","publishTime is "+"今天"+prefs.getString("publish_time","")+"发布");*/
-
-
         cityNameText.setText(prefs.getString("city_name",""));
         temp1Text.setText(prefs.getString("temp1",""));
         temp2Text.setText(prefs.getString("temp2",""));
@@ -139,6 +131,8 @@ public class WeatherActivity extends BaseActivity implements View.OnClickListene
     }
 
     private void init(){
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
         weatherInfoLayout = (LinearLayout)findViewById(R.id.weather_info_layout);
         cityNameText = (TextView)findViewById(R.id.city_name);
         publishText = (TextView)findViewById(R.id.publish_text);
