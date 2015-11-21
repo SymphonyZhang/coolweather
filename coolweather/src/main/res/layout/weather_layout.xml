@@ -124,8 +124,7 @@
         android:orientation="vertical">
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="#484E61">
+            android:layout_height="50dp">
             <Button
                 android:id="@+id/switch_city"
                 android:layout_width="30dp"
