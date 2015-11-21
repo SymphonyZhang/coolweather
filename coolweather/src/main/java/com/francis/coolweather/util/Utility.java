@@ -5,15 +5,19 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 
+import com.francis.coolweather.R;
 import com.francis.coolweather.db.CoolWeatherDB;
 import com.francis.coolweather.model.City;
 import com.francis.coolweather.model.Country;
 import com.francis.coolweather.model.Province;
+import com.francis.coolweather.model.WeatherInfo;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -21,6 +25,9 @@ import java.util.Locale;
  * Created by Francis on 2015/11/12.
  */
 public class Utility {
+
+    private static final String TAG = "Utility";
+    private static int count = 0;
     /**
      * 解析和处理服务器返回的省级数据
      */
@@ -87,36 +94,111 @@ public class Utility {
     /**
      * 解析服务器返回的JSON数据，并将解析出的数据存储到本地
      */
-    public static void handlerWeatherResponse(Context context, String response) {
-        try {
-            JSONObject jsonObject = new JSONObject(response);
-            JSONObject weatherInfo = jsonObject.getJSONObject("weatherinfo");
-            String cityName = weatherInfo.getString("city");
-            String weatherCode = weatherInfo.getString("cityid");
-            String temp1 = weatherInfo.getString("temp1");
-            String temp2 = weatherInfo.getString("temp2");
-            String weatherDesp = weatherInfo.getString("weather");
-            String publishTime = weatherInfo.getString("ptime");
-            saveWeatherInfo(context, cityName, weatherCode, temp1, temp2, weatherDesp, publishTime);
-        } catch (JSONException e) {
-            e.printStackTrace();
+    public static void handlerWeatherResponse(Context context, String response,boolean isToday) {
+
+        WeatherInfo weatherInfo = new WeatherInfo();
+
+        if(isToday){
+            try {
+                JSONObject jsonObject = new JSONObject(response);
+                JSONObject cityInfo = jsonObject.getJSONObject("realtime");
+                String temp = cityInfo.getString("temp")+ "℃";
+                String weather = cityInfo.getString("weather");
+                String publishTime = cityInfo.getString("time");
+                JSONObject today = jsonObject.getJSONObject("today");
+                String tempMax = today.getString("tempMax")+ "℃";
+                String tempMin = today.getString("tempMin")+ "℃";
+                weatherInfo.setTempNow(temp);
+                weatherInfo.setWeather(weather);
+                weatherInfo.setPublishTime(publishTime);
+                weatherInfo.setTempMax(tempMax);
+                weatherInfo.setTempMin(tempMin);
+
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }else {
+            try {
+                JSONObject jsonObject = new JSONObject(response);
+
+                JSONObject cityInfo = jsonObject.getJSONObject("c");
+                String cityId = cityInfo.getString("c1");
+                String cityName = cityInfo.getString("c3");
+                weatherInfo.setCityId(cityId);
+                weatherInfo.setCityName(cityName);
+                JSONObject otherInfo = jsonObject.getJSONObject("f");
+                String updateTime = otherInfo.getString("f0");
+                LogUtil.d(TAG,updateTime.substring(8));
+                weatherInfo.setUpdateTime(updateTime);
+                JSONArray jsonArray = otherInfo.getJSONArray("f1");
+                for (int i = 1; i < jsonArray.length(); i++) {
+                    JSONObject jsonObjectSon = (JSONObject) jsonArray.opt(i);
+                    String day = Common.weatherType(jsonObjectSon.getString("fa"), context);
+                    String high = jsonObjectSon.getString("fc") + "℃";
+                    String night = Common.weatherType(jsonObjectSon.getString("fb"), context);
+                    String low = jsonObjectSon.getString("fd") + "℃";
+                    switch (i) {
+                        case 1:
+                            weatherInfo.setTomorrowDay(day);
+                            weatherInfo.setTomorrowNight(night);
+                            weatherInfo.setTomorrowTempMax(high);
+                            weatherInfo.setTomorrowTempMin(low);
+                            break;
+                        case 2:
+                            weatherInfo.setAfterTomorrowDay(day);
+                            weatherInfo.setAfterTomorrowNight(night);
+                            weatherInfo.setAfterTomorrowTempMax(high);
+                            weatherInfo.setAfterTomorrowTempMin(low);
+                            break;
+                    }
+
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
+        saveWeatherInfo(context,weatherInfo,isToday);
     }
 
     /**
      * 将服务器返回的所有天启信息存储到SharedPreferences文件中
      */
-    public static void saveWeatherInfo(Context context, String cityName, String weatherCode, String temp1, String temp2, String weatherDesp, String publishTime) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日", Locale.CHINA);
+    public static void saveWeatherInfo(Context context, WeatherInfo weatherInfo,boolean isToday) {
         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日", Locale.CHINA);
+
+        Date date = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DAY_OF_MONTH, 2);
+        date = calendar.getTime();
+        SimpleDateFormat spd = new SimpleDateFormat("MM/dd");
+
         editor.putBoolean("city_selected", true);
-        editor.putString("city_name", cityName);
-        editor.putString("weather_code", weatherCode);
-        editor.putString("temp1", temp1);
-        editor.putString("temp2", temp2);
-        editor.putString("weather_desp", weatherDesp);
-        editor.putString("publish_time", publishTime);
-        editor.putString("current_date", sdf.format(new Date()));
+        editor.putString("afterTomorrowDate", spd.format(date));
+        editor.putString("tomorrowDate",context.getResources().getString(R.string.tomorrow));
+        if(isToday){
+            editor.putString("temp", weatherInfo.getTempNow());
+            editor.putString("weather", weatherInfo.getWeather());
+            editor.putString("publishTime",weatherInfo.getPublishTime());
+            editor.putString("tempMax",weatherInfo.getTempMax());
+            editor.putString("tempMin",weatherInfo.getTempMin());
+            editor.putString("current_date", sdf.format(new Date()));
+        }else {
+            editor.putString("cityId",weatherInfo.getCityId());
+            editor.putString("cityName",weatherInfo.getCityName());
+            editor.putString("tomorrowDay",weatherInfo.getTomorrowDay());
+            editor.putString("tomorrowNight",weatherInfo.getTomorrowNight());
+            editor.putString("tomorrowTempMax",weatherInfo.getTomorrowTempMax());
+            editor.putString("tomorrowTempMin",weatherInfo.getTomorrowTempMin());
+            editor.putString("afterTomorrowDay",weatherInfo.getAfterTomorrowDay());
+            editor.putString("afterTomorrowNight",weatherInfo.getAfterTomorrowNight());
+            editor.putString("afterTomorrowTempMax",weatherInfo.getAfterTomorrowTempMax());
+            editor.putString("afterTomorrowTempMin",weatherInfo.getAfterTomorrowTempMin());
+            editor.putString("updateTime",weatherInfo.getUpdateTime());
+        }
+
         editor.commit();
     }
 }

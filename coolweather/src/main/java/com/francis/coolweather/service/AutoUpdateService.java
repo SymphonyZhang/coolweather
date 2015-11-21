@@ -12,7 +12,12 @@ import android.preference.PreferenceManager;
 import com.francis.coolweather.interfaces.HttpCallbackListener;
 import com.francis.coolweather.receiver.AutoUpdateReceiver;
 import com.francis.coolweather.util.HttpUtil;
+import com.francis.coolweather.util.KeyUtil;
 import com.francis.coolweather.util.Utility;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class AutoUpdateService extends Service {
     public AutoUpdateService() {
@@ -45,12 +50,25 @@ public class AutoUpdateService extends Service {
      */
     private void updateWeather(){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String weatherCode = prefs.getString("weather_code", "");
-        String address = "http://www.weather.com.cn/data/cityinfo/"+weatherCode+".html";
+        String weatherCode = prefs.getString("cityId", "");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.CHINA);
+        String publicKey = "http://open.weather.com.cn/data/?areaid=" + weatherCode + "&type=forecast_v&date=" + sdf.format(new Date()) + "&appid=1efaf3f0c28ec437";
+        String privateKey = "a55ee5_SmartWeatherAPI_cd82770";
+        String key = KeyUtil.standardURLEncoder(publicKey, privateKey);
+
+        String address = "http://open.weather.com.cn/data/?areaid=" + weatherCode + "&type=forecast_v&date=" + sdf.format(new Date()) + "&appid=1efaf3&key=" + key;
+        update(address,false);
+
+
+        String addressByMi = "http://weatherapi.market.xiaomi.com/wtr-v2/weather?cityId="+weatherCode;
+        update(addressByMi,true);
+    }
+
+    private void update(final String address,final boolean isToday){
         HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
-                Utility.handlerWeatherResponse(AutoUpdateService.this,response);
+                Utility.handlerWeatherResponse(AutoUpdateService.this,response,isToday);
             }
 
             @Override
