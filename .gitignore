@@ -1,3 +1,11 @@
+.idea/
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+coolweather/build/
+
 # Built application files
 *.apk
 *.ap_
